@@ -1,0 +1,35 @@
+[project]
+name = "finalproject-goncharov-m26-555"
+version = "0.1.0"
+description = "ValutaTrade Hub — консольный валютный кошелёк"
+readme = "README.md"
+authors = [
+    { name = "Goncharov Ivan", email = "theothashaar@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "prettytable>=3.18.0",
+    "requests>=2.34.2",
+]
+
+[project.scripts]
+project = "main:main"
+
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["valutatrade_hub", "main.py"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17.4",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
