@@ -146,3 +146,59 @@ class User:
         user._salt = data["salt"]
         user._registration_date = data["registration_date"]
         return user
+
+
+class Portfolio:
+    """Портфель с кошельками одного пользователя."""
+
+    def __init__(self, user_id, user=None):
+        """Создаёт пустой портфель пользователя."""
+        self._user_id = user_id
+        self._user = user
+        self._wallets = {}
+
+    @property
+    def user(self):
+        """Возвращает переданный объект пользователя."""
+        return self._user
+
+    @property
+    def wallets(self):
+        """Возвращает поверхностную копию словаря кошельков."""
+        return self._wallets.copy()
+
+    def add_currency(self, currency_code):
+        """Добавляет кошелёк, если такой валюты ещё нет."""
+        if currency_code not in self._wallets:
+            self._wallets[currency_code] = Wallet(currency_code)
+
+        return self._wallets[currency_code]
+
+    def get_wallet(self, currency_code):
+        """Возвращает кошелёк валюты или None, если его нет."""
+        return self._wallets.get(currency_code)
+
+    def to_dict(self):
+        """Возвращает данные портфеля для сохранения."""
+        wallets_data = {}
+
+        for currency_code, wallet in self._wallets.items():
+            wallets_data[currency_code] = {"balance": wallet.balance}
+
+        return {
+            "user_id": self._user_id,
+            "wallets": wallets_data,
+        }
+
+    @classmethod
+    def from_dict(cls, data, user=None):
+        """Восстанавливает портфель и его кошельки из словаря."""
+        portfolio = cls(data["user_id"], user)
+
+        for currency_code, wallet_data in data["wallets"].items():
+            portfolio._wallets[currency_code] = Wallet(
+                currency_code,
+                wallet_data["balance"],
+            )
+
+        return portfolio
