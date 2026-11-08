@@ -35,9 +35,9 @@ class SettingsLoader:
         self.reload()
         self._initialized = True
 
-    def get(self, key):
-        """Возвращает значение настройки по имени."""
-        return self._settings[key]
+    def get(self, key, default=None):
+        """Возвращает настройку или значение по умолчанию."""
+        return self._settings.get(key, default)
 
     def get_all(self):
         """Возвращает копию всех настроек."""

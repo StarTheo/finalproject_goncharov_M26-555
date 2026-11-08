@@ -1,0 +1,13 @@
+"""Имена команд консольного интерфейса."""
+
+CMD_REGISTER = "register"
+CMD_LOGIN = "login"
+CMD_LOGOUT = "logout"
+CMD_EXIT = "exit"
+CMD_HELP = "help"
+CMD_SHOW_PORTFOLIO = "show-portfolio"
+CMD_BUY = "buy"
+CMD_SELL = "sell"
+CMD_GET_RATE = "get-rate"
+CMD_UPDATE_RATES = "update-rates"
+CMD_SHOW_RATES = "show-rates"
