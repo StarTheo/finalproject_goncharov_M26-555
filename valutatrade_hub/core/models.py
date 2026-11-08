@@ -200,9 +200,7 @@ class Portfolio:
         portfolio = cls(data["user_id"], user)
 
         for currency_code, wallet_data in data["wallets"].items():
-            portfolio._wallets[currency_code] = Wallet(
-                currency_code,
-                wallet_data["balance"],
-            )
+            wallet = portfolio.add_currency(currency_code)
+            wallet.balance = wallet_data["balance"]
 
         return portfolio
