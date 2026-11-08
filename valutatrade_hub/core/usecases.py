@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from valutatrade_hub.core.currencies import get_currency
+from valutatrade_hub.core.currencies import CRYPTO_CURRENCIES, get_currency
 from valutatrade_hub.core.exceptions import (
     ApiRequestError,
     AuthenticationError,
@@ -256,3 +256,40 @@ class TradingService:
             "wallets": rows,
             "total": total,
         }
+
+    def show_rates(self, currency=None, top=None):
+        """Возвращает сохранённые курсы с фильтрацией."""
+        if top is not None and (type(top) is not int or top <= 0):
+            raise ValueError("Параметр top должен быть положительным целым числом.")
+
+        code_filter = None if currency is None else get_currency(currency).code
+        snapshot = self._database.read("rates")
+        rows = []
+
+        for pair, entry in snapshot["pairs"].items():
+            code, quote = pair.split("_")
+
+            if quote != "USD":
+                continue
+
+            if code_filter is not None and code != code_filter:
+                continue
+
+            if top is not None and code not in CRYPTO_CURRENCIES:
+                continue
+
+            rows.append(
+                {
+                    "pair": pair,
+                    "rate": entry["rate"],
+                    "updated_at": entry["updated_at"],
+                    "source": entry["source"],
+                }
+            )
+
+        rows.sort(key=lambda row: row["rate"], reverse=True)
+
+        if top is not None:
+            rows = rows[:top]
+
+        return rows

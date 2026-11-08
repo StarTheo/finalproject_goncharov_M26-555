@@ -5,6 +5,11 @@ from datetime import datetime, timezone
 
 from valutatrade_hub.core.exceptions import ApiRequestError
 
+SOURCE_NAMES = {
+    "coingecko": "CoinGecko",
+    "exchangerate": "ExchangeRate-API",
+}
+
 
 class RatesUpdater:
     """Координирует API-клиентов и сохранение курсов."""
@@ -14,7 +19,7 @@ class RatesUpdater:
         self._clients = list(clients)
         self._storage = storage
 
-    def run_update(self):
+    def run_update(self, source=None):
         """Обновляет доступные курсы и сообщает об ошибках источников."""
 
         logger = logging.getLogger("valutatrade.parser")
@@ -23,7 +28,17 @@ class RatesUpdater:
         updates = []
         errors = []
 
-        for client in self._clients:
+        clients = self._clients
+
+        if source is not None:
+            if source not in SOURCE_NAMES:
+                raise ValueError(f"Неизвестный источник: {source}.")
+
+            clients = [
+                client for client in clients if client.source == SOURCE_NAMES[source]
+            ]
+
+        for client in clients:
             try:
                 rates = client.fetch_rates()
 
