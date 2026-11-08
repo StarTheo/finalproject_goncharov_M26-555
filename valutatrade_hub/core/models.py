@@ -7,6 +7,7 @@ from decimal import Decimal
 from valutatrade_hub.core.currencies import get_currency
 from valutatrade_hub.core.exceptions import InsufficientFundsError
 from valutatrade_hub.core.utils import (
+    BASE_CURRENCY,
     MIN_PASSWORD_LENGTH,
     PASSWORD_SALT_BYTES,
     hash_password,
@@ -211,11 +212,10 @@ class Portfolio:
 
         return portfolio
 
-    def get_total_value(self, base_currency="USD", rates=None):
+    def get_total_value(self, base_currency=BASE_CURRENCY, rates=None):
         """Считает стоимость портфеля по переданным курсам к USD."""
         base_code = get_currency(base_currency).code
         rates = {} if rates is None else rates
-        base_rate = 1.0 if base_code == "USD" else rates[f"{base_code}_USD"]
         total = 0.0
 
         for code, wallet in self._wallets.items():
@@ -226,7 +226,12 @@ class Portfolio:
                 total += wallet.balance
                 continue
 
-            rate = 1.0 if code == "USD" else rates[f"{code}_USD"]
+            base_rate = (
+                1.0
+                if base_code == BASE_CURRENCY
+                else rates[f"{base_code}_{BASE_CURRENCY}"]
+            )
+            rate = 1.0 if code == BASE_CURRENCY else rates[f"{code}_{BASE_CURRENCY}"]
             total += wallet.balance * rate / base_rate
 
         return total

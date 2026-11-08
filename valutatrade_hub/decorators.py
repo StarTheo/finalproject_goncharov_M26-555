@@ -8,6 +8,8 @@ from functools import wraps
 from inspect import signature
 from time import monotonic
 
+from valutatrade_hub.core.utils import BASE_CURRENCY
+
 MAX_CACHE_ENTRIES = 128
 
 
@@ -76,7 +78,7 @@ def log_action(action, verbose=False):
                     "currency": result["currency"],
                     "amount": str(result["amount"]),
                     "rate": str(result["rate"]),
-                    "base": "USD",
+                    "base": BASE_CURRENCY,
                     "estimated_usd": str(result["estimated_usd"]),
                 }
             )

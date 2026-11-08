@@ -79,3 +79,19 @@ class PortfolioTests(unittest.TestCase):
 
         self.assertEqual(original.get_wallet("USD").balance, 100.0)
         self.assertEqual(restored.get_wallet("USD").balance, 75.0)
+
+    def test_empty_portfolio_requires_no_rates(self):
+        """Пустой портфель оценивается в ноль без курсов."""
+        portfolio = Portfolio(1)
+
+        self.assertEqual(portfolio.get_total_value("EUR"), 0.0)
+
+        portfolio.add_currency("BTC")
+        self.assertEqual(portfolio.get_total_value("EUR"), 0.0)
+
+    def test_base_currency_wallet_requires_no_conversion(self):
+        """Для кошелька в базовой валюте внешние курсы не нужны."""
+        portfolio = Portfolio(1)
+        portfolio.add_currency("EUR").deposit(100)
+
+        self.assertEqual(portfolio.get_total_value("EUR"), 100.0)

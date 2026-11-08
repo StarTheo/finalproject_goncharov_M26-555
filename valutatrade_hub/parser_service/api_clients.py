@@ -66,7 +66,7 @@ class CoinGeckoClient(BaseApiClient):
         """Запрашивает и проверяет цены настроенных криптовалют."""
         params = {
             "ids": ",".join(self.config.crypto_id_map.values()),
-            "vs_currencies": "usd",
+            "vs_currencies": self.config.base_currency.lower(),
             "precision": "full",
         }
 
@@ -89,7 +89,7 @@ class CoinGeckoClient(BaseApiClient):
             if not isinstance(coin_data, dict):
                 raise ApiRequestError(f"CoinGecko не вернул данные для {code}.")
 
-            rate = coin_data.get("usd")
+            rate = coin_data.get(self.config.base_currency.lower())
 
             if type(rate) not in (int, float):
                 raise ApiRequestError(f"CoinGecko вернул некорректный курс {code}.")
@@ -97,7 +97,7 @@ class CoinGeckoClient(BaseApiClient):
             if not 0 < rate < float("inf"):
                 raise ApiRequestError(f"CoinGecko вернул недопустимый курс {code}.")
 
-            rates[f"{code}_USD"] = float(rate)
+            rates[f"{code}_{self.config.base_currency}"] = float(rate)
 
         return rates
 
@@ -116,14 +116,15 @@ class ExchangeRateApiClient(BaseApiClient):
 
         url = (
             f"{self.config.exchangerate_url}/"
-            f"{self.config.exchangerate_api_key}/latest/USD"
+            f"{self.config.exchangerate_api_key}/latest/"
+            f"{self.config.base_currency}"
         )
         data = self._get_json(url)
 
         if data.get("result") != "success":
             raise ApiRequestError("ExchangeRate-API сообщил об ошибке запроса.")
 
-        if data.get("base_code") != "USD":
+        if data.get("base_code") != self.config.base_currency:
             raise ApiRequestError("ExchangeRate-API вернул неожиданную базовую валюту.")
 
         conversion_rates = data.get("conversion_rates")
@@ -147,6 +148,6 @@ class ExchangeRateApiClient(BaseApiClient):
             if not 0 < inverse_rate < float("inf"):
                 raise ApiRequestError(f"Невозможно вычислить обратный курс {code}.")
 
-            rates[f"{code}_USD"] = inverse_rate
+            rates[f"{code}_{self.config.base_currency}"] = inverse_rate
 
         return rates

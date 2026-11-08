@@ -2,6 +2,7 @@
 
 import os
 
+from valutatrade_hub.core.utils import BASE_CURRENCY
 from valutatrade_hub.infra.settings import SettingsLoader
 
 COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price"
@@ -38,3 +39,4 @@ class ParserConfig:
 
         self.exchangerate_api_key = os.getenv(EXCHANGERATE_KEY_ENV)
         self.coingecko_api_key = os.getenv(COINGECKO_KEY_ENV)
+        self.base_currency = BASE_CURRENCY

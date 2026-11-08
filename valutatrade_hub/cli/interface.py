@@ -15,6 +15,7 @@ from valutatrade_hub.core.exceptions import (
     StaleRateError,
     StorageError,
 )
+from valutatrade_hub.parser_service.updater import SOURCE_NAMES
 
 
 class CommandParser(argparse.ArgumentParser):
@@ -54,7 +55,7 @@ def build_parser():
     update = commands.add_parser(command_names.CMD_UPDATE_RATES)
     update.add_argument(
         "--source",
-        choices=("coingecko", "exchangerate"),
+        choices=tuple(SOURCE_NAMES),
         default=None,
     )
 
@@ -103,9 +104,7 @@ class CLI:
                 )
             except (
                 ValueError,
-                ApiRequestError,
                 AuthenticationError,
-                CurrencyNotFoundError,
                 InsufficientFundsError,
                 StaleRateError,
                 StorageError,
