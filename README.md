@@ -223,6 +223,7 @@ valutatrade_hub/
         scheduler.py
     cli/
         interface.py
+        constants.py
     decorators.py
     logging_config.py
 tests/
