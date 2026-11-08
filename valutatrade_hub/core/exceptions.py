@@ -19,3 +19,7 @@ class AuthenticationError(Exception):
 
 class ApiRequestError(Exception):
     """Ошибка запроса к источнику курсов или обработки его ответа."""
+
+
+class StaleRateError(Exception):
+    """Сохранённый курс устарел или имеет неверное время обновления."""

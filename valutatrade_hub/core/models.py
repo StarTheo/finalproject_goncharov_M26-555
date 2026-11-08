@@ -204,3 +204,23 @@ class Portfolio:
             wallet.balance = wallet_data["balance"]
 
         return portfolio
+
+    def get_total_value(self, base_currency="USD", rates=None):
+        """Считает стоимость портфеля по переданным курсам к USD."""
+        base_code = get_currency(base_currency).code
+        rates = {} if rates is None else rates
+        base_rate = 1.0 if base_code == "USD" else rates[f"{base_code}_USD"]
+        total = 0.0
+
+        for code, wallet in self._wallets.items():
+            if wallet.balance == 0:
+                continue
+
+            if code == base_code:
+                total += wallet.balance
+                continue
+
+            rate = 1.0 if code == "USD" else rates[f"{code}_USD"]
+            total += wallet.balance * rate / base_rate
+
+        return total

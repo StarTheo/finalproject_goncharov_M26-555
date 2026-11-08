@@ -23,3 +23,14 @@ def hash_password(password, salt):
         salt.encode("utf-8"),
         PASSWORD_HASH_ITERATIONS,
     ).hex()
+
+
+def validate_amount(amount):
+    """Проверяет положительную конечную сумму операции."""
+    if type(amount) not in (int, float):
+        raise ValueError("Количество валюты должно быть числом.")
+
+    if not 0 < amount < float("inf"):
+        raise ValueError("Количество валюты должно быть конечным и положительным.")
+
+    return float(amount)

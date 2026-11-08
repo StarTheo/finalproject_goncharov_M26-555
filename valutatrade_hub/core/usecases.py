@@ -1,7 +1,19 @@
 """Сценарии регистрации, входа и работы с валютным портфелем."""
 
-from valutatrade_hub.core.exceptions import AuthenticationError, StorageError
+from datetime import datetime, timezone
+
+from valutatrade_hub.core.currencies import get_currency
+from valutatrade_hub.core.exceptions import (
+    ApiRequestError,
+    AuthenticationError,
+    InsufficientFundsError,
+    StaleRateError,
+    StorageError,
+)
 from valutatrade_hub.core.models import Portfolio, User
+from valutatrade_hub.core.utils import validate_amount
+from valutatrade_hub.decorators import create_cacher
+from valutatrade_hub.infra.settings import SettingsLoader
 
 FIRST_USER_ID = 1
 
@@ -9,9 +21,11 @@ FIRST_USER_ID = 1
 class TradingService:
     """Выполняет сценарии приложения через переданное хранилище."""
 
-    def __init__(self, database):
-        """Сохраняет объект хранилища для выполнения операций."""
+    def __init__(self, database, settings=None):
+        """Сохраняет хранилище и настройки приложения."""
         self._database = database
+        self._settings = SettingsLoader() if settings is None else settings
+        self._rate_cache = create_cacher(self._settings.get("rates_ttl_seconds"))
 
     def register(self, username, password):
         """Регистрирует пользователя и создаёт пустой портфель."""
@@ -89,3 +103,154 @@ class TradingService:
                 return
 
         raise StorageError("Не удалось найти портфель для сохранения.")
+
+    def get_rate(self, from_currency, to_currency):
+        """Возвращает свежий курс между поддерживаемыми валютами."""
+        from_code = get_currency(from_currency).code
+        to_code = get_currency(to_currency).code
+
+        if from_code == to_code:
+            return 1.0
+
+        snapshot = self._database.read("rates")
+        now = datetime.now(timezone.utc)
+
+        from_usd = self._get_usd_rate(from_code, snapshot, now)
+        to_usd = self._get_usd_rate(to_code, snapshot, now)
+        cache_key = (from_code, to_code, from_usd, to_usd)
+        result = self._rate_cache(
+            cache_key,
+            lambda: from_usd / to_usd,
+        )
+
+        if not 0 < result < float("inf"):
+            raise ApiRequestError("Невозможно вычислить корректный курс.")
+
+        return result
+
+    def _get_usd_rate(self, code, snapshot, now):
+        """Читает курс валюты к USD и проверяет его свежесть."""
+        if code == "USD":
+            return 1.0
+
+        pair = f"{code}_USD"
+        entry = snapshot["pairs"].get(pair)
+
+        if entry is None:
+            raise ApiRequestError(f"Курс {pair} отсутствует. Выполните update-rates.")
+
+        rate = entry.get("rate")
+
+        if type(rate) not in (int, float) or not 0 < rate < float("inf"):
+            raise ApiRequestError(f"Сохранён некорректный курс {pair}.")
+
+        try:
+            updated_at = datetime.fromisoformat(
+                entry["updated_at"].replace("Z", "+00:00")
+            )
+
+            if updated_at.tzinfo is None:
+                raise ValueError("Отсутствует часовой пояс.")
+
+            age = (now - updated_at).total_seconds()
+        except (KeyError, TypeError, ValueError, AttributeError):
+            raise StaleRateError(
+                f"Некорректное время курса {pair}. Выполните update-rates."
+            ) from None
+
+        if age < 0 or age > self._settings.get("rates_ttl_seconds"):
+            raise StaleRateError(
+                f"Курс {pair} устарел или имеет дату в будущем. Выполните update-rates."
+            )
+
+        return float(rate)
+
+    def buy(self, user_id, currency_code, amount):
+        """Увеличивает баланс валюты и возвращает сведения о покупке."""
+        code = get_currency(currency_code).code
+        amount = validate_amount(amount)
+        portfolio = self.get_portfolio(user_id)
+        rate = self.get_rate(code, "USD")
+
+        wallet = portfolio.add_currency(code)
+        before = wallet.balance
+        wallet.deposit(amount)
+
+        self._save_portfolio(portfolio)
+
+        return {
+            "currency": code,
+            "amount": amount,
+            "rate": rate,
+            "estimated_usd": amount * rate,
+            "before": before,
+            "after": wallet.balance,
+        }
+
+    def sell(self, user_id, currency_code, amount):
+        """Уменьшает баланс валюты и возвращает сведения о продаже."""
+        code = get_currency(currency_code).code
+        amount = validate_amount(amount)
+        portfolio = self.get_portfolio(user_id)
+        rate = self.get_rate(code, "USD")
+
+        wallet = portfolio.get_wallet(code)
+
+        if wallet is None:
+            raise InsufficientFundsError(
+                f"Недостаточно средств: кошелёк {code} отсутствует."
+            )
+
+        before = wallet.balance
+        wallet.withdraw(amount)
+
+        self._save_portfolio(portfolio)
+
+        return {
+            "currency": code,
+            "amount": amount,
+            "rate": rate,
+            "estimated_usd": amount * rate,
+            "before": before,
+            "after": wallet.balance,
+        }
+
+    def show_portfolio(self, user_id, base_currency=None):
+        """Возвращает портфель и его оценку по свежим курсам."""
+        if base_currency is None:
+            base_currency = self._settings.get("default_base_currency")
+
+        base_code = get_currency(base_currency).code
+        portfolio = self.get_portfolio(user_id)
+        rates = {}
+        rows = []
+
+        for code, wallet in portfolio.wallets.items():
+            if wallet.balance == 0:
+                continue
+
+            conversion_rate = self.get_rate(code, base_code)
+            value = wallet.balance * conversion_rate
+
+            rows.append(
+                {
+                    "currency": code,
+                    "balance": wallet.balance,
+                    "value": value,
+                }
+            )
+
+            if code != base_code and code != "USD":
+                rates[f"{code}_USD"] = self.get_rate(code, "USD")
+
+        if rows and base_code != "USD":
+            rates[f"{base_code}_USD"] = self.get_rate(base_code, "USD")
+
+        total = portfolio.get_total_value(base_code, rates) if rows else 0.0
+
+        return {
+            "user": portfolio.user,
+            "base_currency": base_code,
+            "wallets": rows,
+            "total": total,
+        }
