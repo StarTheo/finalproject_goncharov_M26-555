@@ -284,3 +284,14 @@ uvx twine check dist/*
 
 Сборка создаёт wheel и архив исходников в dist/.
 Публикация на PyPI не требуется.
+
+## Демонстрация
+
+Запись показывает регистрацию, вход, обновление курсов,
+покупку и продажу, оценку портфеля и обработку ошибок.
+
+[![Демонстрация ValutaTrade Hub](docs/demo-preview.svg)](https://asciinema.org/a/HioLdzCzeqM5QR0R)
+
+[Открыть запись на asciinema](https://asciinema.org/a/HioLdzCzeqM5QR0R).
+
+Локальные файлы записей .cast исключены из Git.
