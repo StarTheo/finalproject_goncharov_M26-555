@@ -1,8 +1,15 @@
 """Модели пользователя, кошелька и портфеля."""
 
+import secrets
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from valutatrade_hub.core.exceptions import InsufficientFundsError
+from valutatrade_hub.core.utils import (
+    MIN_PASSWORD_LENGTH,
+    PASSWORD_SALT_BYTES,
+    hash_password,
+)
 
 
 class Wallet:
@@ -53,3 +60,89 @@ class Wallet:
             )
 
         self.balance = float(Decimal(str(self.balance)) - Decimal(str(amount)))
+
+
+class User:
+    """Пользователь приложения."""
+
+    def __init__(self, user_id, username, password):
+        """Создаёт пользователя и хеширует его пароль."""
+        self._user_id = user_id
+        self.username = username
+        self._salt = secrets.token_hex(PASSWORD_SALT_BYTES)
+        self._hashed_password = hash_password(password, self._salt)
+        self._registration_date = datetime.now(timezone.utc).isoformat()
+
+    @property
+    def user_id(self):
+        """Возвращает идентификатор пользователя."""
+        return self._user_id
+
+    @property
+    def username(self):
+        """Возвращает имя пользователя."""
+        return self._username
+
+    @username.setter
+    def username(self, value):
+        """Проверяет и устанавливает имя пользователя."""
+        if not isinstance(value, str):
+            raise ValueError("Имя пользователя должно быть строкой.")
+
+        if not value.strip():
+            raise ValueError("Имя пользователя не должно быть пустым.")
+
+        self._username = value
+
+    def verify_password(self, password):
+        """Возвращает результат проверки введённого пароля."""
+        if not isinstance(password, str):
+            return False
+
+        if len(password) < MIN_PASSWORD_LENGTH:
+            return False
+
+        candidate_hash = hash_password(password, self._salt)
+        return secrets.compare_digest(candidate_hash, self._hashed_password)
+
+    def change_password(self, new_password):
+        """Устанавливает новый пароль и генерирует новую соль."""
+        new_salt = secrets.token_hex(PASSWORD_SALT_BYTES)
+        new_hash = hash_password(new_password, new_salt)
+
+        self._salt = new_salt
+        self._hashed_password = new_hash
+
+    @property
+    def registration_date(self):
+        """Возвращает дату регистрации."""
+        return self._registration_date
+
+    def get_user_info(self):
+        """Возвращает сведения о пользователе без хеша пароля и соли."""
+        return {
+            "user_id": self.user_id,
+            "username": self.username,
+            "registration_date": self.registration_date,
+        }
+
+    def to_dict(self):
+        """Возвращает данные пользователя для сохранения."""
+        return {
+            "user_id": self._user_id,
+            "username": self._username,
+            "hashed_password": self._hashed_password,
+            "salt": self._salt,
+            "registration_date": self._registration_date,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        """Восстанавливает пользователя из сохранённых данных."""
+        user = cls.__new__(cls)
+        user._user_id = data["user_id"]
+        user.username = data["username"]
+        user._hashed_password = data["hashed_password"]
+        user._salt = data["salt"]
+        user._registration_date = data["registration_date"]
+        return user
