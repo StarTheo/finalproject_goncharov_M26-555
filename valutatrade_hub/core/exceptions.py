@@ -15,3 +15,7 @@ class StorageError(Exception):
 
 class AuthenticationError(Exception):
     """Ошибка проверки учётных данных пользователя."""
+
+
+class ApiRequestError(Exception):
+    """Ошибка запроса к источнику курсов или обработки его ответа."""
