@@ -57,10 +57,16 @@ class Wallet:
 
         if amount > self.balance:
             raise InsufficientFundsError(
-                f"Недостаточно средств: доступно {self.balance}, требуется {amount}."
+                f"Недостаточно средств: доступно {self.balance:.4f} "
+                f"{self.currency_code}, требуется {amount:.4f} "
+                f"{self.currency_code}"
             )
 
         self.balance = float(Decimal(str(self.balance)) - Decimal(str(amount)))
+
+    def get_balance_info(self):
+        """Возвращает описание текущего баланса кошелька."""
+        return f"{self.currency_code}: {self.balance:.4f}"
 
 
 class User:

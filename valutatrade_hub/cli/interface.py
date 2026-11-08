@@ -157,10 +157,16 @@ class CLI:
             print(f"Справочная стоимость: {result['estimated_usd']:.2f} USD.")
 
         elif args.command == "get-rate":
-            rate = self._service.get_rate(args.from_currency, args.to_currency)
+            info = self._service.get_rate_info(args.from_currency, args.to_currency)
+            updated_at = info["updated_at"] or "внешний курс не требуется"
+
             print(
-                f"Курс {args.from_currency.strip().upper()} → "
-                f"{args.to_currency.strip().upper()}: {rate:.10g}"
+                f"Курс {info['from']}→{info['to']}: {info['rate']:.10g} "
+                f"(обновлено: {updated_at})"
+            )
+            print(
+                f"Обратный курс {info['to']}→{info['from']}: "
+                f"{info['inverse_rate']:.10g}"
             )
 
         elif args.command == "show-portfolio":

@@ -48,10 +48,7 @@ class FiatCurrency(Currency):
 
     def get_display_info(self):
         """Возвращает описание фиатной валюты."""
-        return (
-            f"[Fiat] {self.code} — {self.name} "
-            f"(Issuing country: {self.issuing_country})"
-        )
+        return f"[FIAT] {self.code} — {self.name} (Issuing: {self.issuing_country})"
 
 
 class CryptoCurrency(Currency):
@@ -75,9 +72,9 @@ class CryptoCurrency(Currency):
 
     def get_display_info(self):
         """Возвращает описание криптовалюты."""
-        market_cap_text = f"{self.market_cap:.2e}"
+        market_cap_text = f"{self.market_cap:.2e}".replace("e+", "e")
         return (
-            f"[Crypto] {self.code} — {self.name} "
+            f"[CRYPTO] {self.code} — {self.name} "
             f"(Algo: {self.algorithm}, MCAP: {market_cap_text})"
         )
 

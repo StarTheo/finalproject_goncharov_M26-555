@@ -105,28 +105,53 @@ class TradingService:
         raise StorageError("Не удалось найти портфель для сохранения.")
 
     def get_rate(self, from_currency, to_currency):
-        """Возвращает свежий курс между поддерживаемыми валютами."""
+        """Возвращает числовое значение свежего курса."""
+        return self.get_rate_info(from_currency, to_currency)["rate"]
+
+    def get_rate_info(self, from_currency, to_currency):
+        """Возвращает курс, обратный курс и время используемых данных."""
         from_code = get_currency(from_currency).code
         to_code = get_currency(to_currency).code
 
         if from_code == to_code:
-            return 1.0
+            return {
+                "from": from_code,
+                "to": to_code,
+                "rate": 1.0,
+                "inverse_rate": 1.0,
+                "updated_at": None,
+            }
 
         snapshot = self._database.read("rates")
         now = datetime.now(timezone.utc)
-
         from_usd = self._get_usd_rate(from_code, snapshot, now)
         to_usd = self._get_usd_rate(to_code, snapshot, now)
-        cache_key = (from_code, to_code, from_usd, to_usd)
-        result = self._rate_cache(
-            cache_key,
-            lambda: from_usd / to_usd,
-        )
 
-        if not 0 < result < float("inf"):
+        cache_key = (from_code, to_code, from_usd, to_usd)
+        rate = self._rate_cache(cache_key, lambda: from_usd / to_usd)
+
+        if not 0 < rate < float("inf"):
             raise ApiRequestError("Невозможно вычислить корректный курс.")
 
-        return result
+        inverse_rate = 1 / rate
+
+        if not 0 < inverse_rate < float("inf"):
+            raise ApiRequestError("Невозможно вычислить обратный курс.")
+
+        timestamps = []
+
+        for code in (from_code, to_code):
+            if code != "USD":
+                value = snapshot["pairs"][f"{code}_USD"]["updated_at"]
+                timestamps.append(datetime.fromisoformat(value.replace("Z", "+00:00")))
+
+        return {
+            "from": from_code,
+            "to": to_code,
+            "rate": rate,
+            "inverse_rate": inverse_rate,
+            "updated_at": min(timestamps).isoformat(),
+        }
 
     def _get_usd_rate(self, code, snapshot, now):
         """Читает курс валюты к USD и проверяет его свежесть."""
