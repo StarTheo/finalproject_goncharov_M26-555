@@ -11,3 +11,7 @@ class CurrencyNotFoundError(Exception):
 
 class StorageError(Exception):
     """Ошибка чтения или сохранения данных приложения."""
+
+
+class AuthenticationError(Exception):
+    """Ошибка проверки учётных данных пользователя."""
