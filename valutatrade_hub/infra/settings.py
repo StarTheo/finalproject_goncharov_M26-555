@@ -4,12 +4,13 @@ import tomllib
 from pathlib import Path
 
 from valutatrade_hub.core.currencies import get_currency
+from valutatrade_hub.core.utils import BASE_CURRENCY
 
 DEFAULT_SETTINGS = {
     "data_dir": "data",
     "logs_dir": "logs",
     "rates_ttl_seconds": 300,
-    "default_base_currency": "USD",
+    "default_base_currency": BASE_CURRENCY,
     "request_timeout": 10,
     "update_interval_seconds": 300,
 }

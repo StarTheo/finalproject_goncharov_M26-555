@@ -5,6 +5,7 @@ import hashlib
 MIN_PASSWORD_LENGTH = 4
 PASSWORD_HASH_ITERATIONS = 200_000
 PASSWORD_SALT_BYTES = 16
+BASE_CURRENCY = "USD"
 
 
 def hash_password(password, salt):

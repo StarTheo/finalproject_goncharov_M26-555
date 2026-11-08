@@ -11,7 +11,7 @@ from valutatrade_hub.core.exceptions import (
     StorageError,
 )
 from valutatrade_hub.core.models import Portfolio, User
-from valutatrade_hub.core.utils import validate_amount
+from valutatrade_hub.core.utils import BASE_CURRENCY, validate_amount
 from valutatrade_hub.decorators import create_cacher, log_action
 from valutatrade_hub.infra.settings import SettingsLoader
 
@@ -141,8 +141,8 @@ class TradingService:
         timestamps = []
 
         for code in (from_code, to_code):
-            if code != "USD":
-                value = snapshot["pairs"][f"{code}_USD"]["updated_at"]
+            if code != BASE_CURRENCY:
+                value = snapshot["pairs"][f"{code}_{BASE_CURRENCY}"]["updated_at"]
                 timestamps.append(datetime.fromisoformat(value.replace("Z", "+00:00")))
 
         return {
@@ -155,10 +155,10 @@ class TradingService:
 
     def _get_usd_rate(self, code, snapshot, now):
         """Читает курс валюты к USD и проверяет его свежесть."""
-        if code == "USD":
+        if code == BASE_CURRENCY:
             return 1.0
 
-        pair = f"{code}_USD"
+        pair = f"{code}_{BASE_CURRENCY}"
         entry = snapshot["pairs"].get(pair)
 
         if entry is None:
@@ -196,7 +196,7 @@ class TradingService:
         code = get_currency(currency_code).code
         amount = validate_amount(amount)
         portfolio = self.get_portfolio(user_id)
-        rate = self.get_rate(code, "USD")
+        rate = self.get_rate(code, BASE_CURRENCY)
 
         wallet = portfolio.add_currency(code)
         before = wallet.balance
@@ -219,7 +219,7 @@ class TradingService:
         code = get_currency(currency_code).code
         amount = validate_amount(amount)
         portfolio = self.get_portfolio(user_id)
-        rate = self.get_rate(code, "USD")
+        rate = self.get_rate(code, BASE_CURRENCY)
 
         wallet = portfolio.get_wallet(code)
 
@@ -267,11 +267,13 @@ class TradingService:
                 }
             )
 
-            if code != base_code and code != "USD":
-                rates[f"{code}_USD"] = self.get_rate(code, "USD")
+            if code != base_code and code != BASE_CURRENCY:
+                rates[f"{code}_{BASE_CURRENCY}"] = self.get_rate(code, BASE_CURRENCY)
 
-        if rows and base_code != "USD":
-            rates[f"{base_code}_USD"] = self.get_rate(base_code, "USD")
+        if rows and base_code != BASE_CURRENCY:
+            rates[f"{base_code}_{BASE_CURRENCY}"] = self.get_rate(
+                base_code, BASE_CURRENCY
+            )
 
         total = portfolio.get_total_value(base_code, rates) if rows else 0.0
 
@@ -294,7 +296,7 @@ class TradingService:
         for pair, entry in snapshot["pairs"].items():
             code, quote = pair.split("_")
 
-            if quote != "USD":
+            if quote != BASE_CURRENCY:
                 continue
 
             if code_filter is not None and code != code_filter:
