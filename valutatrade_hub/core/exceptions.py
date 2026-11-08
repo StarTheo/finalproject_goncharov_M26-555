@@ -7,3 +7,7 @@ class InsufficientFundsError(Exception):
 
 class CurrencyNotFoundError(Exception):
     """Запрошенная валюта не поддерживается."""
+
+
+class StorageError(Exception):
+    """Ошибка чтения или сохранения данных приложения."""
