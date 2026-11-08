@@ -12,7 +12,7 @@ from valutatrade_hub.core.exceptions import (
 )
 from valutatrade_hub.core.models import Portfolio, User
 from valutatrade_hub.core.utils import validate_amount
-from valutatrade_hub.decorators import create_cacher
+from valutatrade_hub.decorators import create_cacher, log_action
 from valutatrade_hub.infra.settings import SettingsLoader
 
 FIRST_USER_ID = 1
@@ -165,6 +165,7 @@ class TradingService:
 
         return float(rate)
 
+    @log_action("BUY", verbose=True)
     def buy(self, user_id, currency_code, amount):
         """Увеличивает баланс валюты и возвращает сведения о покупке."""
         code = get_currency(currency_code).code
@@ -187,6 +188,7 @@ class TradingService:
             "after": wallet.balance,
         }
 
+    @log_action("SELL", verbose=True)
     def sell(self, user_id, currency_code, amount):
         """Уменьшает баланс валюты и возвращает сведения о продаже."""
         code = get_currency(currency_code).code

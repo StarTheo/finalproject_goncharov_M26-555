@@ -1,5 +1,6 @@
 """Получение курсов из источников и обновление хранилища."""
 
+import logging
 from datetime import datetime, timezone
 
 from valutatrade_hub.core.exceptions import ApiRequestError
@@ -15,6 +16,10 @@ class RatesUpdater:
 
     def run_update(self):
         """Обновляет доступные курсы и сообщает об ошибках источников."""
+
+        logger = logging.getLogger("valutatrade.parser")
+        logger.info("Начало обновления курсов.")
+
         updates = []
         errors = []
 
@@ -45,14 +50,26 @@ class RatesUpdater:
                     )
 
                 updates.extend(source_updates)
+                logger.info(
+                    "Источник %s: получено пар %s.",
+                    client.source,
+                    len(source_updates),
+                )
             except ApiRequestError as error:
                 errors.append(f"{client.source}: {error}")
+                logger.warning("Источник %s: %s", client.source, error)
 
         if not updates:
             details = "; ".join(errors) or "Нет настроенных источников."
+            logger.error("Обновление отменено: ни один источник не вернул курсы.")
             raise ApiRequestError(f"Не удалось обновить курсы. {details}")
 
         self._storage.save(updates)
+        logger.info(
+            "Обновление завершено: пар %s, ошибок источников %s.",
+            len(updates),
+            len(errors),
+        )
 
         return {
             "updated": len(updates),
