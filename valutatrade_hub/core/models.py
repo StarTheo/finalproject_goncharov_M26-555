@@ -4,6 +4,7 @@ import secrets
 from datetime import datetime, timezone
 from decimal import Decimal
 
+from valutatrade_hub.core.currencies import get_currency
 from valutatrade_hub.core.exceptions import InsufficientFundsError
 from valutatrade_hub.core.utils import (
     MIN_PASSWORD_LENGTH,
@@ -17,7 +18,7 @@ class Wallet:
 
     def __init__(self, currency_code, balance=0.0):
         """Создаёт кошелёк с проверенным начальным балансом."""
-        self.currency_code = currency_code
+        self.currency_code = get_currency(currency_code).code
         self.balance = balance
 
     @property
@@ -168,15 +169,18 @@ class Portfolio:
         return self._wallets.copy()
 
     def add_currency(self, currency_code):
-        """Добавляет кошелёк, если такой валюты ещё нет."""
-        if currency_code not in self._wallets:
-            self._wallets[currency_code] = Wallet(currency_code)
+        """Добавляет кошелёк поддерживаемой валюты без дублирования."""
+        code = get_currency(currency_code).code
 
-        return self._wallets[currency_code]
+        if code not in self._wallets:
+            self._wallets[code] = Wallet(code)
+
+        return self._wallets[code]
 
     def get_wallet(self, currency_code):
-        """Возвращает кошелёк валюты или None, если его нет."""
-        return self._wallets.get(currency_code)
+        """Возвращает кошелёк поддерживаемой валюты или None."""
+        code = get_currency(currency_code).code
+        return self._wallets.get(code)
 
     def to_dict(self):
         """Возвращает данные портфеля для сохранения."""
